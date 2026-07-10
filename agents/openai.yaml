@@ -1,0 +1,4 @@
+interface:
+  display_name: "Managing Project Files"
+  short_description: "Curate deliverables and clean project clutter safely"
+  default_prompt: "Use $managing-project-files to build a curated deliverables hub and safely audit project clutter."
