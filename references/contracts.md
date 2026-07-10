@@ -7,6 +7,7 @@
 - Artifact selection contract
 - Current review report contract
 - Cleanup candidate table
+- Continuous-management surfaces
 - Example application contract
 
 ## Deliverables directory contract
@@ -17,6 +18,8 @@ Use this default unless the project already has an equivalent clearly designated
 deliverables/
 ├── README.md                  # sole review entry
 ├── MANIFEST.csv              # status and source mapping
+├── MAINTENANCE_STATUS.md      # one current reconciliation status
+├── CLEANUP_CANDIDATES.csv     # current review-only cleanup surface
 ├── reports/                   # current readable reports and navigation wrappers
 ├── figures/                   # selected final figures only
 ├── tables/                    # small decision/index/claim-support tables
@@ -34,6 +37,8 @@ id,category,title,date,status,deliverable_path,source_path,notes
 ```
 
 This is the default for a new hub. Preserve an existing equivalent project schema when it already records the same identity, category, title, date, status, deliverable path, canonical source, and notes semantics and has a working validator.
+
+The bundled continuous manager writes this exact default schema. Keep a project with an equivalent but different schema in audit mode until an adapter or project-native manager is verified; do not silently rewrite its manifest.
 
 Rules:
 
@@ -103,6 +108,20 @@ id,path,size_bytes,size_human,risk,status,recommendation,evidence_required,reaso
 
 Recommended statuses: `safe_cache`, `review_required`, `keep`, `protected`, `deleted`.
 
+## Continuous-management surfaces
+
+Keep versioned decisions and untracked machine state under `.codex/`, not in the human-facing hub:
+
+```text
+.codex/project-files-policy.json   # track when project policy belongs in Git
+.codex/project-files-state.json    # ignored observations/pending/applied state
+.codex/project-files-plan.json     # ignored current plan
+.codex/project-files.lock          # ignored scan/apply operation lock
+.codex/project-files-maintain.lock # ignored whole-maintain lock
+```
+
+Maintain one `MAINTENANCE_STATUS.md` and one `CLEANUP_CANDIDATES.csv`. Do not accumulate dated scan logs, event streams, receipts, per-file metadata, or quarantine directories.
+
 ## Example application contract
 
 Given a project with many reports, 1,000 logs, large raw data, a dirty Git tree, and broken reviewability, a compliant result has:
@@ -111,7 +130,7 @@ Given a project with many reports, 1,000 logs, large raw data, a dirty Git tree,
 - one concise current review rather than a mirror of all reports;
 - a manifest mapping promoted lightweight artifacts to canonical sources;
 - no logs, raw data, or large runtime files under `deliverables/`;
-- only verified cache or reconstructible-intermediate deletions already authorized by the user;
+- automatic deletion limited to strict safe-cache files; reconstructible intermediates remain review-only until exact authorization and the safety gate are satisfied;
 - a candidate table for logs, archives, duplicate-looking results, and raw/run trees;
 - existing technical paths and unrelated Git changes preserved;
 - validator, project checks, and before/after measurements recorded.

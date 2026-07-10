@@ -1,4 +1,4 @@
 interface:
   display_name: "Managing Project Files"
-  short_description: "Curate deliverables and clean project clutter safely"
-  default_prompt: "Use $managing-project-files to build a curated deliverables hub and safely audit project clutter."
+  short_description: "Continuously curate deliverables and control clutter"
+  default_prompt: "Use $managing-project-files to maintain project deliverables continuously and clean only policy-authorized safe cache."

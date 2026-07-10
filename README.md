@@ -14,6 +14,8 @@
 - 在删除前检查 Git 状态、路径引用、生成流程、输入数据、活动任务和恢复能力。
 - 检查成果清单、Markdown 链接、路径越界以及日志、轨迹、检查点等运行文件是否误入成果目录。
 - 输出准确的删除清单、回收空间、受保护路径和暂缓处理项目。
+- 支持任务结束或定期运行的半自动维护：按明确规则收录新成果，并保持幂等。
+- 通过计划重派生、SHA-256、无覆盖原子发布、原子交换 CAS、可恢复 `pending`/治理事务和固定目录锁避免并发覆盖或半更新。
 
 ## 适用场景
 
@@ -33,7 +35,13 @@
 - 存在名字相似或看起来重复的文件；
 - 文件可以压缩或移动到隔离目录。
 
-原始实验数据、活动上传目录、未提交的用户修改、唯一分析结果、未解决的交接文件和溯源证据默认受保护。未经精确授权，skill 只生成候选清单，不执行删除。
+原始实验数据、活动上传目录、未提交的用户修改、唯一分析结果、未解决的交接文件和溯源证据默认受保护。半自动模式只会删除未超过 `max_cache_delete_bytes` 且通过路径、Git、保护规则、指纹与 SHA-256 复查的 `.DS_Store` 与 `*.pyc`，并清理由此变空的 `__pycache__`。超限缓存和其他文件未经精确授权只进入候选清单。
+
+真正删除前，候选文件会先在固定父目录中原子隔离，再次检查 inode、当前策略、Git tracked/dirty 状态和保护规则。若文件被替换、刚被纳入 Git 或规则发生变化，管理器会恢复文件并安全停止，不会追随被替换的父目录。
+
+成果发布采用“只创建、不覆盖”：如果目标文件在发布瞬间已存在，任务会安全停止；如果已管理成果的内容发生变化，则使用确定性的内容版本路径更新清单，不覆盖旧文件。中断后可根据项目内 `pending` 状态恢复，但不会据此扩大删除权限。
+
+`MANIFEST.csv` 与 `README.md` 使用原子交换式 compare-and-swap：只有被换出的文件仍与预检 inode 和摘要一致时才提交；并发编辑或父目录移动会触发回滚。切换 `copy`/`wrapper` 时会重新计算兼容的扩展名和目标目录。
 
 ## 推荐成果目录
 
@@ -41,6 +49,8 @@
 deliverables/
 ├── README.md
 ├── MANIFEST.csv
+├── MAINTENANCE_STATUS.md
+├── CLEANUP_CANDIDATES.csv
 ├── reports/
 ├── figures/
 ├── tables/
@@ -72,9 +82,56 @@ git clone https://github.com/Zhubiao112/managing-project-files-skill.git \
 使用 $managing-project-files 审计当前项目。不要移动原始数据，不要直接删除高风险文件，先给我清理候选表。
 ```
 
+## 持续管理（方案 B）
+
+方案 B 是按项目启用的半自动模式：自动维护符合明确规则的最终成果，只自动清理严格白名单缓存，日志和其他中间文件仍等待人工确认。
+
+先初始化项目：
+
+```bash
+python3 ~/.codex/skills/managing-project-files/scripts/manage_project_files.py \
+  init --project-root /path/to/project --mode semi-auto
+```
+
+然后编辑项目中的 `.codex/project-files-policy.json`，填写真实的成果来源、保护路径和扫描根目录。默认不会猜测哪些文件是最终报告。
+
+默认 `cleanup_roots` 为空，因此在项目明确配置窄范围扫描根目录之前，不会遍历清理目录。不要为大型项目或 HPC 结果树直接填入 `.`。
+
+一个最小成果规则示例：
+
+```json
+{
+  "name": "final-reports",
+  "category": "report",
+  "include": ["reports/final/**/*.md"],
+  "exclude": ["reports/final/drafts/**"],
+  "destination": "reports",
+  "promotion": "wrapper",
+  "status": "current"
+}
+```
+
+日常命令：
+
+```bash
+# 只生成计划、状态和清理候选，不收录、不删除
+python3 ~/.codex/skills/managing-project-files/scripts/manage_project_files.py \
+  scan --project-root /path/to/project
+
+# 半自动项目：扫描后收录成果，并清理严格白名单缓存
+python3 ~/.codex/skills/managing-project-files/scripts/manage_project_files.py \
+  maintain --project-root /path/to/project
+
+# 查看上一次扫描和执行状态
+python3 ~/.codex/skills/managing-project-files/scripts/manage_project_files.py \
+  status --project-root /path/to/project
+```
+
+推荐在“产生或修改正式报告、最终图表、总结表”的 Codex 任务结束时运行一次 `maintain`，再按需建立项目级定期审计作为兜底。不默认安装 `launchd`、cron、watchdog 或 HPC 登录节点守护进程。
+
 ## 验证成果目录
 
-skill 自带轻量验证器，只依赖 Python 标准库：
+skill 的持续管理器和轻量验证器都只依赖 Python 标准库：
 
 ```bash
 python3 ~/.codex/skills/managing-project-files/scripts/validate_deliverables.py \
@@ -91,8 +148,12 @@ python3 ~/.codex/skills/managing-project-files/scripts/validate_deliverables.py 
 ├── agents/openai.yaml
 ├── references/
 │   ├── cleanup-safety.md
+│   ├── continuous-management.md
 │   └── contracts.md
-├── scripts/validate_deliverables.py
+├── scripts/
+│   ├── manage_project_files.py
+│   └── validate_deliverables.py
+├── tests/
 ├── README.md
 └── LICENSE
 ```

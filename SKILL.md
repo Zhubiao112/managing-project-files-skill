@@ -1,98 +1,95 @@
 ---
 name: managing-project-files
-description: Use when a project has scattered reports or figures, mixed agent logs and intermediate files, unclear current-versus-obsolete outputs, poor reviewability, or storage pressure requiring safe cleanup without losing raw data or provenance.
+description: Use when a project has scattered or recurring reports and figures, accumulating logs, caches, or intermediates, deliverables drift, unclear current outputs, task-end or scheduled maintenance needs, or storage pressure requiring safe cleanup without losing raw data or provenance.
 ---
 
 # Managing Project Files
 
 ## Overview
 
-Build a small, stable human-facing `deliverables/` layer while preserving canonical technical paths and scientific provenance. Treat cleanup as an evidence-and-authority decision, never a filename or age heuristic.
+Maintain a small human-facing `deliverables/` layer while preserving canonical technical paths and provenance. Treat promotion as explicit policy and cleanup as an evidence-and-authority decision.
 
 ## Non-negotiable rules
 
-1. Default to an additive curated hub; do not bulk-move or mirror every readable artifact.
+1. Keep canonical sources in place; never bulk-move or mirror readable directories.
 2. Preserve raw data, active uploads, dirty user work, unique results, and unresolved provenance.
-3. Never treat `old`, `tmp`, `backup`, untracked state, age, or “not open” as deletion proof.
-4. Do not replace clutter with `.ops`, quarantine, hard-link, checksum, or log-archive clutter.
-5. Before any deletion, compression, deduplication, or large move, **MUST read** [references/cleanup-safety.md](references/cleanup-safety.md).
-6. When creating the hub or manifest, **MUST read** [references/contracts.md](references/contracts.md).
+3. Never use names, age, ignored/untracked state, or “not open” as deletion proof.
+4. Do not create watcher, quarantine, checksum, receipt, log-archive, or sidecar-file clutter.
+5. Do not invent retention periods, disk thresholds, artifact patterns, or completion markers.
+6. In semi-automatic mode, automatic deletion is limited to bounded, untracked, non-dirty, unprotected `.DS_Store` and `*.pyc`; oversized strict caches are review-only, and `__pycache__` is removed only when empty.
+7. Before any broader deletion, compression, deduplication, or large move, **MUST read** [references/cleanup-safety.md](references/cleanup-safety.md).
+8. Before creating or continuously maintaining a hub, **MUST read** [references/contracts.md](references/contracts.md).
 
 ## Workflow
-
-Copy this checklist and track it:
 
 ```text
 Project file governance:
 - [ ] Read project rules and authoritative docs
 - [ ] Inspect Git state and path references
+- [ ] Choose one-time audit or opt-in continuous management
 - [ ] Measure file counts and storage drivers
-- [ ] Select current user-facing artifacts
-- [ ] Create/update the curated deliverables hub
-- [ ] Classify cleanup candidates by evidence tier
-- [ ] Execute only authorized exact-path cleanup
-- [ ] Validate links, manifest, project checks, and reclaimed space
+- [ ] Curate current user-facing artifacts
+- [ ] Classify cleanup candidates
+- [ ] Execute only policy-authorized exact actions
+- [ ] Validate links, manifest, protected paths, and reclaimed bytes
 ```
 
-### 1. Read before designing
+### One-time audit
 
-Inspect available `AGENTS.md`, `README*`, project log, runbook, `docs/`, scripts, manifests, `.gitignore`, and Git status. Use project evidence instead of imposing a generic hierarchy. Search references to report/result paths before proposing moves.
+Read available `AGENTS.md`, `README*`, project logs, runbooks, `docs/`, scripts, manifests, `.gitignore`, and Git status. Measure first; avoid whole-project hashing or compression. Select artifacts using authoritative pointers, validated completion state, audience relevance, and explicit evidence boundaries. Keep `current`, `limited`, `pending`, `superseded`, `archive`, and `MISSING` distinct.
 
-### 2. Audit without heavy local work
+Prefer navigation wrappers and bounded lightweight copies. Use modification time only as a tie-breaker inside one output family. Apply the safety reference’s cache, review-required, and protected classifications. If deletion authority is incomplete, return a candidate table.
 
-Measure top-level sizes, relevant file counts, storage drivers, and tracked/untracked/ignored state. Use `rg` for discovery. Avoid whole-project hashing or compression; route heavy I/O to the project-approved compute environment.
+### Continuous management
 
-### 3. Curate, do not mirror
+For recurring drift, task-end maintenance, scheduled audits, or automatic collection of new outputs, **MUST read** [references/continuous-management.md](references/continuous-management.md). Use the bundled standard-library manager:
 
-Select a small current set using authoritative pointers, validated completion state, audience relevance, and evidence boundaries. Modification time is only a tie-breaker inside one output family. Keep `current`, `limited`, `pending`, `superseded`, `archive`, and explicit `MISSING` distinct.
+```bash
+python3 scripts/manage_project_files.py init --project-root /path/to/project --mode audit
+python3 scripts/manage_project_files.py scan --project-root /path/to/project
+python3 scripts/manage_project_files.py maintain --project-root /path/to/project
+python3 scripts/manage_project_files.py status --project-root /path/to/project
+```
 
-Do not impose an arbitrary artifact-count cap. “Curated” means every promoted item has a distinct review purpose and source mapping; include all necessary current items, but never mirror a directory merely because its files are readable.
+`init --mode semi-auto` is opt-in per project. Configure explicit artifact rules before expecting promotion. `scan` writes a plan and candidate/status surfaces but never promotes or deletes. `maintain` applies promotions and strict safe-cache deletion only when policy mode is `semi-auto`. Never install an always-on watcher by default.
 
-Prefer navigation wrappers and lightweight copies of selected final assets. Keep canonical sources in place. Avoid hard links and absolute symlinks: they couple edits or reduce portability.
+Promotion is no-clobber. Bounded copies must retain their scan-time SHA-256 through publication; changed generated content receives a deterministic versioned destination instead of replacing an existing file. Pending intent allows exact recovery after interruption. Existing governance files are identity/content checked through pinned file descriptors.
 
-### 4. Classify cleanup candidates
+Before strict-cache deletion, isolate and keep open the exact inode within a pinned parent directory, then recheck current policy, Git state, protection rules, and post-unlink parent identity; restore on mismatch. Governance rewrites require atomic rename-exchange CAS plus a two-file recovery journal. Initialization and lock cleanup use pinned `.codex` directory descriptors and must fail closed on concurrent edits.
 
-Apply the safety reference's three tiers: safe cache, reconstructible intermediate, and high-risk/protected. Logs, staging, archives, processed duplicates, databases, environments, trajectories, and scientific run trees are never “safe cache.”
+Execute the bundled scripts from the installed skill. Do not vendor copies into each project unless the user explicitly requests a pinned project integration. Do not invent a schedule cadence; reuse an existing project cadence or obtain approval before creating an automation.
 
-### 5. Validate and report
+### Validate
 
-Run the bundled validator from this skill directory:
+Run:
 
 ```bash
 python3 scripts/validate_deliverables.py --project-root /path/to/project
 ```
 
-Use this default validator for new hubs. If a project already has an equivalent schema and project-native validator, preserve it and verify that it enforces the same source/status/link/runtime-file invariants. Do not copy the bundled script into every project unless the user asks to integrate it.
-
-Run project-native checks, `git diff --check`, scoped Git status, link/source-copy checks, and before/after measurements. Report exact deletions, bytes reclaimed, protected paths, and deferred candidates. Do not stage, commit, or push unless requested.
+Then run project-native checks, `git diff --check`, scoped Git status, source/copy checks, and before/after measurements. Do not stage, commit, push, or install a scheduler unless requested.
 
 ## Quick reference
 
 | Symptom | Required response |
 |---|---|
-| Reports scattered | Curate one entry and manifest; preserve canonical paths. |
-| Hundreds of readable outputs | Select by review purpose; do not mirror all or impose a numeric cap. |
-| Disk nearly full | Measure first; do not use urgency as deletion evidence. |
-| Many HPC logs | Preserve until job/provenance policy is verified; avoid heavy local compression. |
-| Duplicate-looking results | Require identity, a named canonical survivor, and rebuild/recovery proof. |
-| Dirty Git tree | Preserve user changes; no stash/reset/cleanup or unrelated staging. |
-| Active upload/staging | Protect until activity and recovery are verified. |
+| New outputs keep appearing | Use explicit rules plus task-end/periodic `maintain`; do not guess. |
+| File may still be written | Defer until the stability gate passes. |
+| Duplicate basenames | Use canonical source identity and deterministic destinations. |
+| Many logs/intermediates | List for review; never auto-delete or auto-compress. |
+| Strict cache found | Auto-delete only in per-project semi-auto mode after Git/protection checks. |
+| Dirty governance file or active lock | Do not overwrite it; stop and report the conflict. |
+| Large HPC tree | Scope configured roots; route heavy work to approved compute nodes. |
 
 ## Red flags
 
-Stop destructive work when considering:
-
-- mirroring every readable artifact or enforcing an invented item cap;
-- deleting by name, age, ignored state, or no-open-handle alone;
-- hashing/compressing large trees locally or on an HPC login node;
-- moving duplicate-looking files or deleting mixed-eligibility directories;
-- treating dirty, `pending`, handoff, or `MISSING` assets as obsolete.
-
-When any red flag appears, return to audit and produce a candidate list instead of deleting.
+Stop automatic work when considering a daemon, arbitrary retention, broad “reconstructible” deletion, login-node compression, canonical-path moves, or overwriting dirty governance files. Return to scan/audit mode.
 
 ## Common mistakes
 
-- Creating another mirror instead of a curated review surface.
-- Selecting “latest” without completion evidence or scanning references.
-- Omitting canonical source/status fields from the manifest.
-- Reporting savings or completion without fresh validation.
+- Initializing semi-auto without project-specific artifact and protected-path rules.
+- Treating a filesystem event or job exit as completion evidence.
+- Copying large reports instead of creating navigation wrappers.
+- Confusing `superseded` with deletion authority.
+- Accumulating maintenance logs instead of maintaining one current status and candidate table.
+- Copying manager scripts into every project or inventing a polling interval without approval.

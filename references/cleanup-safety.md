@@ -7,6 +7,7 @@
 - Risk matrix
 - Insufficient deletion evidence
 - Exact deletion gate
+- Continuous-automation boundary
 - Logs and HPC-heavy operations
 - Active staging and dirty worktrees
 - Verification contract
@@ -39,7 +40,7 @@ Never promote level 5 hints into deletion authority.
 
 | Class | Examples | Default action |
 |---|---|---|
-| Safe cache | `.DS_Store`, `__pycache__`, `*.pyc`, tool cache proven disposable | Measure and remove only within user-authorized scope. |
+| Safe cache | `.DS_Store`, `*.pyc`, empty `__pycache__`, tool cache proven disposable | Continuous auto-delete is limited to the first three; other tool caches need exact authorization. |
 | Reconstructible intermediate | raw/local render layers, derived scratch tables, failed-run fragments | Delete only after the exact gate below is satisfied. |
 | High risk | non-empty logs, processed duplicates, migration archives, staging, databases, environments | List; require project-specific provenance and explicit approval. |
 | Protected | raw experimental data, unique trajectories/poses, active uploads, dirty user files, source evidence, unresolved handoffs | Do not delete or relocate. |
@@ -78,6 +79,14 @@ Before deleting any reconstructible intermediate, require all applicable checks:
 - user already authorized this exact path/category, otherwise request approval.
 
 After deletion, re-run project checks, source/link checks, Git status, and size measurement. Record exact paths and bytes reclaimed.
+
+## Continuous-automation boundary
+
+Semi-automatic maintenance may delete only unchanged, untracked, non-dirty, non-symlink, unprotected `.DS_Store` and `*.pyc` files, followed by an empty `__pycache__` directory. This is a closed hard-coded set, not an example list.
+
+Everything else is review-only. A policy glob may discover logs or intermediates, but it cannot turn them into automatic deletion targets. “Reconstructible,” “older than the retention period,” “disk above a threshold,” “job completed,” or “management wants it automated” do not expand authority.
+
+Do not install a watcher or background daemon as a shortcut. Prefer task-end reconciliation plus a project-scoped periodic audit. Do not invent retention windows, disk thresholds, or log-compression jobs without current project evidence, explicit authorization, and the approved compute environment.
 
 ## Logs and HPC-heavy operations
 

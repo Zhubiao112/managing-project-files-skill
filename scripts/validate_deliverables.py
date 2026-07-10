@@ -83,7 +83,7 @@ def _markdown_targets(markdown_file: Path) -> Iterable[str]:
             target = target.split(" \"", 1)[0]
         elif " '" in target:
             target = target.split(" '", 1)[0]
-        yield unquote(target)
+        yield target
 
 
 def validate_deliverables(
@@ -170,9 +170,10 @@ def validate_deliverables(
                     or target.startswith("mailto:")
                 ):
                     continue
-                local_target = target.split("#", 1)[0]
+                local_target = target.split("#", 1)[0].split("?", 1)[0]
                 if not local_target:
                     continue
+                local_target = unquote(local_target)
                 resolved_target = (markdown_file.parent / local_target).resolve()
                 if not resolved_target.exists():
                     relative_markdown = markdown_file.relative_to(project_root)
